@@ -200,7 +200,76 @@ most_reliable_airports %>%
 
 # 4/ causes impact on delays (mean delay impact on delay for each cause)
 
+# Filter for delayed flights
+delayed_flights <- airline_delay_cause %>%
+  filter(arr_del15 > 0)
+
+# Calculate mean delay for each cause
+mean_delay_by_cause <- delayed_flights %>%
+  summarise(
+    mean_weather_delay = mean(weather_delay, na.rm = TRUE),
+    mean_nas_delay = mean(nas_delay, na.rm = TRUE),
+    mean_security_delay = mean(security_delay, na.rm = TRUE),
+    mean_carrier_delay = mean(carrier_delay, na.rm = TRUE),
+    mean_late_aircraft_delay = mean(late_aircraft_delay, na.rm = TRUE)
+  ) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "cause",
+    values_to = "mean_delay"
+  )
+
+# Plot
+ggplot(mean_delay_by_cause, aes(x = cause, y = mean_delay, fill = cause)) +
+  geom_col() +
+  labs(
+    title = "Mean Delay Impact by Cause",
+    x = "Cause of Delay",
+    y = "Mean Delay (minutes)"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
 
 # 5/ cause analysis, which causes dominate others
+
+# Filter for delayed flights
+delayed_flights <- airline_delay_cause %>%
+  filter(arr_del15 > 0)
+
+# Sum delays by cause
+total_delays_by_cause <- delayed_flights %>%
+  summarise(
+    total_weather_delay = sum(weather_delay, na.rm = TRUE),
+    total_nas_delay = sum(nas_delay, na.rm = TRUE),
+    total_security_delay = sum(security_delay, na.rm = TRUE),
+    total_carrier_delay = sum(carrier_delay, na.rm = TRUE),
+    total_late_aircraft_delay = sum(late_aircraft_delay, na.rm = TRUE),
+    total_delay = sum(arr_delay, na.rm = TRUE)
+  )
+
+# Calculate proportion for each cause
+proportion_delays_by_cause <- total_delays_by_cause %>%
+  pivot_longer(
+    cols = -total_delay,
+    names_to = "cause",
+    values_to = "total_delay_by_cause"
+  ) %>%
+  mutate(
+    proportion = total_delay_by_cause / total_delay
+  )
+
+# Plot
+ggplot(proportion_delays_by_cause, aes(x = cause, y = proportion, fill = cause)) +
+  geom_col() +
+  labs(
+    title = "Proportion of Delay Causes (Delayed Flights Only)",
+    x = "Cause of Delay",
+    y = "Proportion of Total Delays"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
 
 
