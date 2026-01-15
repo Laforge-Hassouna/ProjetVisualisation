@@ -198,20 +198,20 @@ most_reliable_airports %>%
   ) +
   theme_minimal()
 
-# 4/ causes impact on delays (mean delay impact on delay for each cause)
-
-# Filter for delayed flights
+# Pour les plots 4 et 5, nous filtrons d'abords les vols en retards:
 delayed_flights <- airline_delay_cause %>%
   filter(arr_del15 > 0)
 
-# Calculate mean delay for each cause
+# 4/ causes impact on delays (mean delay impact on delay for each cause)
+
+# On calcule les délais moyens (moyenne de moyenne car dataset par année et non par vol) 
 mean_delay_by_cause <- delayed_flights %>%
   summarise(
-    mean_weather_delay = mean(weather_delay, na.rm = TRUE),
-    mean_nas_delay = mean(nas_delay, na.rm = TRUE),
-    mean_security_delay = mean(security_delay, na.rm = TRUE),
-    mean_carrier_delay = mean(carrier_delay, na.rm = TRUE),
-    mean_late_aircraft_delay = mean(late_aircraft_delay, na.rm = TRUE)
+    mean_weather_delay = mean(weather_delay/weather_ct, na.rm = TRUE),
+    mean_nas_delay = mean(nas_delay/nas_ct, na.rm = TRUE),
+    mean_security_delay = mean(security_delay/security_ct, na.rm = TRUE),
+    mean_carrier_delay = mean(carrier_delay/carrier_ct, na.rm = TRUE),
+    mean_late_aircraft_delay = mean(late_aircraft_delay/late_aircraft_ct, na.rm = TRUE)
   ) %>%
   pivot_longer(
     cols = everything(),
@@ -230,15 +230,9 @@ ggplot(mean_delay_by_cause, aes(x = cause, y = mean_delay, fill = cause)) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-
-
 # 5/ cause analysis, which causes dominate others
 
-# Filter for delayed flights
-delayed_flights <- airline_delay_cause %>%
-  filter(arr_del15 > 0)
-
-# Sum delays by cause
+# on commence par récupérer les délais totaux par causes
 total_delays_by_cause <- delayed_flights %>%
   summarise(
     total_weather_delay = sum(weather_delay, na.rm = TRUE),
@@ -249,27 +243,40 @@ total_delays_by_cause <- delayed_flights %>%
     total_delay = sum(arr_delay, na.rm = TRUE)
   )
 
-# Calculate proportion for each cause
-proportion_delays_by_cause <- total_delays_by_cause %>%
-  pivot_longer(
-    cols = -total_delay,
-    names_to = "cause",
-    values_to = "total_delay_by_cause"
-  ) %>%
-  mutate(
-    proportion = total_delay_by_cause / total_delay
+# on renomme les classes (optionnel)
+delay_causes <- data.frame(
+  cause = c(
+    "Weather Delay",
+    "NAS Delay",
+    "Security Delay",
+    "Carrier Delay",
+    "Late Aircraft Delay"
+  ),
+  total_delay = c(
+    total_delays_by_cause$total_weather_delay,
+    total_delays_by_cause$total_nas_delay,
+    total_delays_by_cause$total_security_delay,
+    total_delays_by_cause$total_carrier_delay,
+    total_delays_by_cause$total_late_aircraft_delay
   )
+)
 
-# Plot
-ggplot(proportion_delays_by_cause, aes(x = cause, y = proportion, fill = cause)) +
-  geom_col() +
+# on calcule grace aux totaux le rapport par rapport au temps de délai total
+delay_causes <- delay_causes %>%
+  mutate(proportion = total_delay / total_delays_by_cause$total_delay)
+
+# plot
+ggplot(delay_causes, aes(x = cause, y = proportion, fill = cause)) +
+  geom_bar(stat = "identity") +
   labs(
-    title = "Proportion of Delay Causes (Delayed Flights Only)",
+    title = "Proportion of Total Delay by Cause",
     x = "Cause of Delay",
-    y = "Proportion of Total Delays"
+    y = "Proportion of Total Delay"
   ) +
+  scale_y_continuous(labels = scales::percent) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
 
 
 
